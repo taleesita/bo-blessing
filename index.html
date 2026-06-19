@@ -33,8 +33,22 @@
     document.head.appendChild(l);
   }catch(e){}
   if('serviceWorker' in navigator){
+    // Auto-reload once when a newly deployed version takes over
+    var hadController = !!navigator.serviceWorker.controller;
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(refreshing || !hadController) return;
+      refreshing = true;
+      window.location.reload();
+    });
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').catch(function(e){ console.warn('SW reg failed:', e); });
+      navigator.serviceWorker.register('./sw.js').then(function(reg){
+        reg.update();
+        // Check for updates whenever the app regains focus
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState === 'visible') reg.update();
+        });
+      }).catch(function(e){ console.warn('SW reg failed:', e); });
     });
   }
 })();
